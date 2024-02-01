@@ -30,18 +30,18 @@ class BaseArgumentConfig {
 
 //template<class T> struct ArgMode
 
-class IntArgumentConfig {
+class IntArgumentConfig : public BaseArgumentConfig {
  public:
-  void PutValue(std::string_view name, int value);
+  void PutValue(std::string_view name, int* value);
   void PutValues(std::string_view name, std::vector<int>* values);
   void PutPositional(std::string_view arg);
-  std::string*& GetValue(std::string_view name);
-  std::vector<std::string>*& GetValues(std::string_view name);
+  int*& GetValue(std::string_view name);
+  std::vector<int>*& GetValues(std::string_view name);
   [[nodiscard]] std::string_view GetPositional() const;
 
  private:
-  std::map<std::string_view, std::string*> names_;
-  std::map<std::string_view, std::vector<std::string>*> multi_;
+  std::map<std::string_view, int*> names_;
+  std::map<std::string_view, std::vector<int>*> multi_;
   std::string_view positional_{};
 };
 
@@ -84,9 +84,15 @@ class ArgParser {
 
   ArgParser& AddStringArgument(const char* name, const char* desc);
 
+  ArgParser& AddIntArgument(char key, const char* name, const char* desc);
+
+  ArgParser& AddIntArgument(const char* name, const char* desc);
+
   ArgParser& AddHelp(const char* desc);
 
   ArgParser& StoreValue(bool& value);
+
+  ArgParser& StoreValue(int& value);
 
   ArgParser& StoreValue(std::string& value);
 
@@ -94,9 +100,11 @@ class ArgParser {
 
   ArgParser& StoreValues(std::vector<std::string>& values);
 
+  ArgParser& StoreValues(std::vector<int>& values);
+
   ArgParser& Positional();
 
-  std::string HelpDescription();
+  [[nodiscard]] std::string HelpDescription() const;
 
  private:
   const char* program_name_;

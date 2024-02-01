@@ -98,7 +98,7 @@ ArgParser& ArgParser::StoreValue(bool& value) {
     return *this;
 }
 
-std::string ArgParser::HelpDescription() {
+std::string ArgParser::HelpDescription() const {
     std::stringstream out;
 
     if (!is_added_help_) {
@@ -137,6 +137,23 @@ ArgParser& ArgParser::Positional() {
         str_args_.PutPositional(cur_arg_);
     }
     return *this;
+}
+
+ArgParser& ArgParser::AddIntArgument(char key, const char* name, const char* desc) {
+    cur_arg_ = {name};
+    int_args_.Update(key, name, desc);
+    return *this;
+}
+
+ArgParser& ArgParser::AddIntArgument(const char* name, const char* desc) {
+    return AddIntArgument('\0', name, desc);
+}
+
+ArgParser& ArgParser::StoreValue(int& value) {
+    int_args_.PutValue(cur_arg_, &value);
+}
+ArgParser& ArgParser::StoreValues(std::vector<int>& values) {
+    int_args_.PutValues(cur_arg_, &values);
 }
 
 ArgParser::~ArgParser() = default;
@@ -186,10 +203,26 @@ std::string_view StringArgumentConfig::GetPositional() const {
 std::vector<std::string>*& StringArgumentConfig::GetValues(std::string_view name) {
     return multi_[name];
 }
-void IntArgumentConfig::PutValue(std::string_view name, int value) {
 
+void IntArgumentConfig::PutValue(std::string_view name, int* value) {
+    names_.insert({name, value});
 }
-//void IntArgumentConfig::PutValues(std::string_view name, std::vector<std::string>* values) {
-//
-//}
+
+void IntArgumentConfig::PutValues(std::string_view name, std::vector<int>* values) {
+    multi_.insert({name, values});
+}
+void IntArgumentConfig::PutPositional(std::string_view arg) {
+    positional_ = arg;
+}
+
+int*& IntArgumentConfig::GetValue(std::string_view name) {
+    return names_[name];
+}
+std::vector<int>*& IntArgumentConfig::GetValues(std::string_view name) {
+    return multi_[name];
+}
+std::string_view IntArgumentConfig::GetPositional() const {
+    return positional_;
+}
+
 }
