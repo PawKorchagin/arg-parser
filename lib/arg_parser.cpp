@@ -1,3 +1,5 @@
+#include <sstream>
+
 #include "arg_parser.h"
 
 namespace {
@@ -73,6 +75,7 @@ bool ArgParser::Parse(int argc, char** argv) {
 }
 
 ArgParser& ArgParser::AddHelp(const char* desc) {
+    is_added_help_ = true;
     return AddFlag('h', "help", desc);
 }
 
@@ -96,7 +99,13 @@ ArgParser& ArgParser::StoreValue(bool& value) {
 }
 
 std::string ArgParser::HelpDescription() {
-    return {"kek"};
+    std::stringstream out;
+
+    if (!is_added_help_) {
+        out << "No info had provided yet";
+    }
+
+    return out.str();
 }
 
 ArgParser& ArgParser::AddStringArgument(const char* name, const char* desc) {
@@ -140,21 +149,21 @@ std::string_view BaseArgumentConfig::GetDescription(std::string_view name) {
     return desc_[name];
 }
 
-void StringArgumentConfig::Update(char key, const char* name, const char* desc) {
+void BaseArgumentConfig::Update(char key, const char* name, const char* desc) {
     used_.insert(name);
     keys_.insert({key, name});
     desc_.insert({name, desc});
 }
 
-void StringArgumentConfig::MakeMulti() {
-    is_multi = true;
+void BaseArgumentConfig::MakeMulti() {
+    is_multi_ = true;
 }
 
 void StringArgumentConfig::PutValue(std::string_view name, std::string* value) {
     names_.insert({name, value});
 }
 
-bool StringArgumentConfig::Contains(std::string_view name) {
+bool BaseArgumentConfig::Contains(std::string_view name) {
     return used_.contains(name);
 }
 
@@ -177,4 +186,10 @@ std::string_view StringArgumentConfig::GetPositional() const {
 std::vector<std::string>*& StringArgumentConfig::GetValues(std::string_view name) {
     return multi_[name];
 }
+void IntArgumentConfig::PutValue(std::string_view name, int value) {
+
+}
+//void IntArgumentConfig::PutValues(std::string_view name, std::vector<std::string>* values) {
+//
+//}
 }

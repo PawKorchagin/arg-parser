@@ -1,1 +1,1 @@
-add_library(LIB_FILES arg-parser.h arg-parser.cpp)
+add_library(argparser arg_parser.cpp arg_parser.h)
