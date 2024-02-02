@@ -76,17 +76,17 @@ class ArgParser {
 
   bool Parse(int argc, char** argv);
 
-  ArgParser& AddFlag(const char* name, const char* desc);
+  ArgParser& AddFlag(const char* name, const char* desc = "");
 
-  ArgParser& AddFlag(char key, const char* name, const char* desc);
+  ArgParser& AddFlag(char key, const char* name, const char* desc = "");
 
-  ArgParser& AddStringArgument(char key, const char* name, const char* desc);
+  ArgParser& AddStringArgument(char key, const char* name, const char* desc = "");
 
-  ArgParser& AddStringArgument(const char* name, const char* desc);
+  ArgParser& AddStringArgument(const char* name, const char* desc = "");
 
-  ArgParser& AddIntArgument(char key, const char* name, const char* desc);
+  ArgParser& AddIntArgument(char key, const char* name, const char* desc = "");
 
-  ArgParser& AddIntArgument(const char* name, const char* desc);
+  ArgParser& AddIntArgument(const char* name, const char* desc = "");
 
   ArgParser& AddHelp(const char* desc);
 
@@ -103,6 +103,8 @@ class ArgParser {
   ArgParser& StoreValues(std::vector<int>& values);
 
   ArgParser& Positional();
+
+  bool Help() const;
 
   [[nodiscard]] std::string HelpDescription() const;
 

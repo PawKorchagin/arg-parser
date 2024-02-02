@@ -11,10 +11,25 @@ void PrintError(const char* msg) {
 namespace ArgumentParser {
 ArgParser::ArgParser(const char* name) : program_name_(name) {}
 
+
+bool IsFlag(FlagConfig& flags_, std::string_view cur, std::string& name) {
+    if (flags_.names_.contains(cur.substr(2))) {
+        name = cur.substr(2);
+    }
+
+    if (flags_.keys_.contains(arg[1])) {
+        name = flags_.keys_[arg[1]];
+    }
+
+    if (flags_.names_.contains(name)) {
+        *flags_.names_[name] = true;
+    }
+}
+
 bool ArgParser::Parse(const std::vector<std::string>& args) {
     if (args.size() < 2) {
-        PrintError("No arguments in program run configuration");
-        return false;
+//        PrintError("No arguments in program run configuration");
+        return true;
     }
 
     for (size_t i = 1 ; i < args.size() ; ++i) {
@@ -27,17 +42,10 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
         std::string_view cur = arg;
         std::string name;
 
-        if (flags_.names_.contains(cur.substr(2))) {
-            name = cur.substr(2);
-        }
+        bool proposal = true;
 
-        if (flags_.keys_.contains(arg[1])) {
-            name = flags_.keys_[arg[1]];
-        }
+        if (IsFlag(flags_, arg, name)) {
 
-        if (flags_.names_.contains(name)) {
-            *flags_.names_[name] = true;
-            continue;
         }
 
         if (str_args_.Contains(cur.substr(2, cur.find('=') - 2))) {
@@ -140,7 +148,7 @@ ArgParser& ArgParser::Positional() {
 }
 
 ArgParser& ArgParser::AddIntArgument(char key, const char* name, const char* desc) {
-    cur_arg_ = {name};
+    cur_arg_ = name;
     int_args_.Update(key, name, desc);
     return *this;
 }
@@ -151,9 +159,12 @@ ArgParser& ArgParser::AddIntArgument(const char* name, const char* desc) {
 
 ArgParser& ArgParser::StoreValue(int& value) {
     int_args_.PutValue(cur_arg_, &value);
+    return *this;
 }
+
 ArgParser& ArgParser::StoreValues(std::vector<int>& values) {
     int_args_.PutValues(cur_arg_, &values);
+    return *this;
 }
 
 ArgParser::~ArgParser() = default;
@@ -225,4 +236,7 @@ std::string_view IntArgumentConfig::GetPositional() const {
     return positional_;
 }
 
+bool ArgParser::Help() const {
+    return is_added_help_;
+}
 }
