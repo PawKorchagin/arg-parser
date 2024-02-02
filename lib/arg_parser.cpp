@@ -17,13 +17,15 @@ bool IsFlag(FlagConfig& flags_, std::string_view cur, std::string& name) {
         name = cur.substr(2);
     }
 
-    if (flags_.keys_.contains(arg[1])) {
-        name = flags_.keys_[arg[1]];
+    if (flags_.keys_.contains(cur[1])) {
+        name = flags_.keys_[cur[1]];
     }
 
     if (flags_.names_.contains(name)) {
         *flags_.names_[name] = true;
+        return true;
     }
+    return false;
 }
 
 bool ArgParser::Parse(const std::vector<std::string>& args) {
