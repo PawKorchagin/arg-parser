@@ -1,19 +1,25 @@
 #include <sstream>
 #include <charconv>
+#include <algorithm>
+#include <utility>
 
 #include "arg_parser.h"
 
 // namespace {
-void PrintError(const std::string msg, const std::string spec) {
+void PrintError(const std::string_view msg, const std::string_view spec) {
     std::cerr << "Error: " << msg << ' ' << spec << '\n';
 }
 
-void PrintWarning(const std::string msg) {
-    std::cerr << "Warning: " << msg << '\n';
+void PrintWarning(const std::string_view msg, const std::string_view spec = "") {
+    std::cerr << "Warning: " << msg << ' ' << spec << '\n';
+}
+
+std::string MergeChars(const char a, const char b) {
+    return std::string() + a + b;
 }
 
 namespace ArgumentParser {
-ArgParser::ArgParser(const std::string name) : program_name_(name) {
+ArgParser::ArgParser(std::string name) : program_name_(std::move(name)) {
 }
 
 bool IsFlagArgument(const FlagConfig& args, const std::string& arg) {
@@ -29,92 +35,32 @@ bool IsStringArgument(const StringArgumentConfig& args, const std::string& arg) 
 }
 
 bool ArgParser::Parse(const std::vector<std::string>& args) {
-    if (args.size() < 2) {
-        // PrintError("No arguments in program run configuration");
-        return true;
-    }
+    if (IsArgumentCoincidence())
+        return false;
 
     for (size_t i = 1 ; i < args.size() ; ++i) {
         if (args[i] == "--help" || args[i] == "-h") {
             std::cerr << HelpDescription();
             return true;
+        } {
+            std::vector<std::string> cur_arg_config;
+            cur_arg_config.push_back(args[i]);
+            if (i + 1 < args.size())
+                cur_arg_config.push_back(args[i + 1]);
+
+            size_t j = 0;
+            const auto is_argument = this->IsArgument(cur_arg_config, j);
+
+            i += j;
+
+            if (is_argument == -1)
+                return false;
+
+            if (is_argument == 1)
+                continue;
         }
 
-        std::string arg = args[i].substr(0, args[i].find('='));
-        std::string value = args[i].substr(args[i].find('=') + 1);
-
-        if (flags_.Contains(arg) || flags_.KeyContains(arg)) {
-            *flags_.GetValue(arg) = true;
-        } else if (str_args_.Contains(arg) || str_args_.KeyContains(arg)) {
-            // const auto stored = str_args_.GetValue(arg);
-            if (arg == args[i]) {
-                arg = str_args_.GetByKey(arg);
-                ++i;
-                if (i < args.size()) {
-                    value = args[i];
-                } else {
-                    //TODO default
-                    PrintWarning("Non-default argument missing value");
-                    return false;
-                }
-            }
-
-            if (str_args_.IsMultiValueArgument(arg)) {
-                if (str_args_.IsStored(arg)) {
-                    str_args_.GetValues(arg)->push_back(value);
-                } else {
-                    //TODO create multivalue
-                }
-            } else {
-                if (str_args_.IsStored(arg)) {
-                    *str_args_.GetValue(arg) = value;
-                } else {
-                    str_args_.CreateValue(arg, value);
-                }
-            }
-        } else if (int_args_.Contains(arg) || int_args_.KeyContains(arg)) {
-            int res;
-            if (arg == args[i]) {
-                ++i;
-                if (i < args.size()) {
-                    auto [_, ec] = std::from_chars(args[i].data(), args[i].data() + args[i].size(), res);
-                    if (ec == std::errc::invalid_argument) {
-                        PrintWarning("Given string instead int positional argument");
-                        return false;
-                    }
-                    if (ec == std::errc::result_out_of_range) {
-                        PrintWarning("Given number more than an int");
-                        return false;
-                    }
-                } else {
-                    //TODO default
-                    PrintWarning("Non-default argument missing value");
-                    return false;
-                }
-            } else {
-                auto [_, ec] = std::from_chars(args[i].data(), args[i].data() + args[i].size(), res);
-                if (ec == std::errc::invalid_argument) {
-                    PrintWarning("Not a number given as int argument");
-                    return false;
-                } else if (ec == std::errc::result_out_of_range) {
-                    PrintWarning("Given number more than an int");
-                    return false;
-                }
-            }
-            if (int_args_.IsMultiValueArgument(arg)) {
-                if (int_args_.IsStored(arg)) {
-                    int_args_.GetValues(arg)->push_back(res);
-                } else {
-                    //TODO create multivalue
-                }
-            } else {
-                if (int_args_.IsStored(arg)) {
-                    *int_args_.GetValue(arg) = res;
-                } else {
-                    int_args_.CreateValue(arg, res);
-                }
-            }
-        } else if (int result = 0 ; std::from_chars(args[i].data(), args[i].data() + args[i].size(), result).ec ==
+        if (int result = 0 ; std::from_chars(args[i].data(), args[i].data() + args[i].size(), result).ec ==
             std::errc{}
             && int_args_
             .IsPositional()) {
@@ -128,6 +74,43 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
                 str_args_.GetValues(str_args_.GetPositional())->push_back(args[i]);
             else {
                 //TODO
+            }
+        } else {
+            bool is_any_wrong_key = false;
+
+            for (size_t j = 1 ; j < args[i].size() - 1 ; ++j) {
+                std::string arg = MergeChars(args[i][0], args[i][j]);
+
+                if (flags_.KeyContains(arg)) {
+                    arg = flags_.GetByKey(arg);
+                }
+
+                if (flags_.Contains(arg)) {
+                    if (flags_.IsStored(arg)) {
+                        *flags_.GetValue(arg) = true;
+                    } else {
+                        flags_.CreateValue(arg);
+                    }
+                } else {
+                    is_any_wrong_key = true;
+                    break;
+                }
+            }
+
+            std::vector<std::string> cur_arg_config;
+            cur_arg_config.push_back(MergeChars(args[i][0], args[i].back()));
+            if (i + 1 < args.size())
+                cur_arg_config.push_back(args[i + 1]);
+            size_t delta = 0;
+
+            if (this->IsArgument(cur_arg_config, delta) != 1)
+                return false;
+
+            i += delta;
+
+            if (is_any_wrong_key) {
+                PrintWarning("No such argument name, no any positional argument with same type:", args[i]);
+                return false;
             }
         }
     }
@@ -153,7 +136,7 @@ ArgParser& ArgParser::AddFlag(const std::string& key,
 }
 
 ArgParser& ArgParser::AddFlag(const std::string& name, const std::string& desc) {
-    return AddFlag("", name, desc);
+    return AddFlag(name, name, desc);
 }
 
 ArgParser& ArgParser::StoreValue(bool& value) {
@@ -169,6 +152,106 @@ std::string ArgParser::HelpDescription() const {
     }
 
     return out.str();
+}
+
+bool ArgParser::IsArgumentCoincidence() {
+    std::vector<std::string_view> ins1, ins2, ins3;
+    auto flags = flags_.GetUsedArgumentsList();
+    auto ints = int_args_.GetUsedArgumentsList();
+    auto strs = str_args_.GetUsedArgumentsList();
+    std::ranges::set_intersection(flags, ints, std::back_inserter(ins1));
+    std::ranges::set_intersection(flags, strs, std::back_inserter(ins2));
+    std::ranges::set_intersection(ints, strs, std::back_inserter(ins3));
+    return !ins1.empty() || !ins2.empty() || !ins3.empty();
+}
+
+int ArgParser::IsArgument(const std::vector<std::string>& args, size_t& i) {
+    std::string arg = args[i].substr(0, args[i].find('='));
+    std::string value = args[i].substr(args[i].find('=') + 1);
+
+    if (flags_.KeyContains(arg)) {
+        arg = flags_.GetByKey(arg);
+    }
+
+    if (flags_.Contains(arg)) {
+        if (flags_.IsStored(arg)) {
+            *flags_.GetValue(arg) = true;
+        } else {
+            flags_.CreateValue(arg);
+        }
+        return 1;
+    }
+
+    if (str_args_.Contains(arg) || str_args_.KeyContains(arg)) {
+        // const auto stored = str_args_.GetValue(arg);
+        if (arg == args[i]) {
+            arg = str_args_.GetByKey(arg);
+            ++i;
+            if (i < args.size()) {
+                value = args[i];
+            } else if (!str_args_.IsDefault(arg)) {
+                PrintWarning("Non-default argument missing value");
+
+                return -1;
+            }
+        }
+
+        if (str_args_.IsMultiValueArgument(arg)) {
+            if (str_args_.IsStored(arg)) {
+                str_args_.GetValues(arg)->push_back(value);
+            } else {
+                //TODO create multivalue
+            }
+        } else {
+            if (str_args_.IsStored(arg)) {
+                *str_args_.GetValue(arg) = value;
+            } else {
+                str_args_.CreateValue(arg, value);
+            }
+        }
+        return 1;
+    }
+    if (int_args_.Contains(arg) || int_args_.KeyContains(arg)) {
+        int res;
+        if (arg == args[i]) {
+            arg = int_args_.GetByKey(arg);
+            ++i;
+            if (i < args.size()) {
+                auto [_, ec] = std::from_chars(args[i].data(), args[i].data() + args[i].size(), res);
+                if (ec == std::errc::invalid_argument) {
+                    PrintWarning("Given string instead int positional argument");
+
+                    return -1;
+                }
+                if (ec == std::errc::result_out_of_range) {
+                    PrintWarning("Given number more than an int");
+
+                    return -1;
+                }
+            } else if (!int_args_.IsDefault(arg)) {
+                PrintWarning("Non-default argument missing value");
+
+                return -1;
+            }
+        } else {
+            auto [_, ec] = std::from_chars(value.data(), value.data() + value.size(), res);
+            if (ec == std::errc::invalid_argument) {
+                PrintWarning("Not a number given as int argument");
+
+                return -1;
+            }
+            if (ec == std::errc::result_out_of_range) {
+                PrintWarning("Given number more than an int");
+
+                return -1;
+            }
+        }
+        int_args_.SetArgument(arg, res);
+
+        return 1;
+    }
+
+    return 0;
 }
 
 ArgParser& ArgParser::AddStringArgument(const std::string& name,
@@ -188,8 +271,12 @@ ArgParser& ArgParser::StoreValue(std::string& value) {
     str_args_.PutValue(cur_arg_, &value);
     return *this;
 }
+
 ArgParser& ArgParser::MultiValue(uint min_count) {
-    str_args_.MakeMulti(cur_arg_);
+    if (int_args_.Contains(cur_arg_))
+        int_args_.MakeMulti(cur_arg_);
+    else if (str_args_.Contains(cur_arg_))
+        str_args_.MakeMulti(cur_arg_);
     return *this;
 }
 
@@ -197,13 +284,14 @@ ArgParser& ArgParser::StoreValues(std::vector<std::string>& values) {
     str_args_.PutValues(cur_arg_, &values);
     return *this;
 }
+
 ArgParser& ArgParser::Positional() {
     // std::cerr << cur_arg_ << '\n';
     if (IsStringArgument(str_args_, cur_arg_)) {
-        str_args_.MakeMulti(cur_arg_);
+        // str_args_.MakeMulti(cur_arg_);
         str_args_.PutPositional(cur_arg_);
     } else if (IsIntArgument(int_args_, cur_arg_)) {
-        int_args_.MakeMulti(cur_arg_);
+        // int_args_.MakeMulti(cur_arg_);
         int_args_.PutPositional(cur_arg_);
     }
 
@@ -216,6 +304,10 @@ std::string& ArgParser::GetStringValue(const std::string& name) {
 
 int& ArgParser::GetIntValue(const std::string& name) {
     return *int_args_.GetValue(name);
+}
+
+bool& ArgParser::GetFlag(const std::string& name) {
+    return *flags_.GetValue(name);
 }
 
 ArgParser& ArgParser::AddIntArgument(const std::string& key,
@@ -270,6 +362,12 @@ void BaseArgumentConfig::MakeMulti(const std::string& arg) {
 bool BaseArgumentConfig::IsMultiValueArgument(const std::string& arg) const {
     return is_multi_.contains(arg);
 }
+const std::set<std::string>& BaseArgumentConfig::GetUsedArgumentsList() {
+    return used_;
+}
+bool BaseArgumentConfig::IsDefault(const std::string& arg) const {
+    return is_default_.contains(arg);
+}
 
 void StringArgumentConfig::PutValue(const std::string& name, std::string* value) {
     names_.insert({name, value});
@@ -293,6 +391,8 @@ void StringArgumentConfig::PutValues(const std::string& name,
 }
 
 void StringArgumentConfig::PutPositional(const std::string& arg) {
+    if (!positional_.empty())
+        PrintWarning("Positional argument redefined from", positional_);
     positional_ = arg;
     is_positional = true;
 }
@@ -312,6 +412,11 @@ void StringArgumentConfig::CreateValue(const std::string& name, const std::strin
 
 bool StringArgumentConfig::IsStored(const std::string& arg) const {
     return names_.contains(arg) || multi_.contains(arg);
+}
+
+void StringArgumentConfig::SetDefault(const std::string& arg, const std::string& value) {
+    this->CreateValue(arg, value);
+    is_default_.insert(arg);
 }
 
 // void StringArgumentConfig::CreateValues(std::string name, const std::string& value) {
@@ -360,25 +465,67 @@ void IntArgumentConfig::CreateValue(const std::string& name, const int value) {
     cvalue_.insert({name, value});
     names_.insert({name, &cvalue_[name]});
 }
+void IntArgumentConfig::CreateValues(const std::string& name) {
+    cvalues_.insert({name, {}});
+}
+void IntArgumentConfig::AddValue(const std::string&, int) {
+
+}
 
 bool IntArgumentConfig::IsStored(const std::string& arg) const {
     return names_.contains(arg) || multi_.contains(arg);
 }
+void IntArgumentConfig::SetDefault(const std::string& arg, int value) {
+    this->CreateValue(arg, value);
+    is_default_.insert(arg);
+}
+void IntArgumentConfig::SetParcedArgument(const std::string& arg, int value) {
+    if (this->IsMultiValueArgument(arg)) {
+        if (this->IsStored(arg)) {
+            this->GetValues(arg)->push_back(value);
+        } else {
+            //TODO create multivalue
+        }
+    } else {
+        if (this->IsStored(arg)) {
+            *this->GetValue(arg) = value;
+        } else {
+            this->CreateValue(arg, value);
+        }
+    }
+}
 
-bool ArgParser::Help() const { return is_added_help_; }
+bool ArgParser::Help() const {
+    return is_added_help_;
+}
 
-void FlagConfig::PutValue(std::string name, bool* value) {
+void FlagConfig::PutValue(const std::string& name, bool* value) {
     names_.insert({name, value});
 }
 void FlagConfig::MakeMulti(const std::string& basic_string) {
     PrintWarning("try to make multivalue flag argument");
 }
 
-bool*& FlagConfig::GetValue(const std::string name) {
+bool*& FlagConfig::GetValue(const std::string& name) {
     if (!names_.contains(name)) {
         PrintError("No such argument in parser:", name);
         exit(EXIT_FAILURE);
     }
     return names_[name];
+}
+void FlagConfig::CreateValue(const std::string& arg) {
+    cvalue_.insert({arg, true});
+    names_.insert({arg, &cvalue_[arg]});
+}
+void FlagConfig::CreateValue(const std::string& arg, bool value) {
+    cvalue_.insert({arg, value});
+    names_.insert({arg, &cvalue_[arg]});
+}
+void FlagConfig::SetDefault(const std::string& arg, const bool value) {
+    CreateValue(arg, value);
+    is_default_.insert(arg);
+}
+bool FlagConfig::IsStored(const std::string& arg) {
+    return names_.contains(arg);
 }
 } // namespace ArgumentParser
