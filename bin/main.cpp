@@ -4,9 +4,11 @@
 #include <iostream>
 #include <numeric>
 
+#include "unordered_map"
+
 struct Options {
-  bool sum = false;
-  bool mult = false;
+    bool sum = false;
+    bool mult = false;
 };
 
 int main(int argc, char** argv) {
@@ -14,32 +16,32 @@ int main(int argc, char** argv) {
     std::vector<int> values;
 
     ArgumentParser::ArgParser parser("Program");
-    parser.AddIntArgument("N", "just numbers").MultiValue(1).Positional().StoreValues(values);
-    parser.AddFlag("sum", "add args").StoreValue(opt.sum);
-    parser.AddFlag("mult", "multiply args").StoreValue(opt.mult);
-    parser.AddHelp("Program accumulate arguments");
-
-    if(!parser.Parse(argc, argv)) {
-        std::cout << "Wrong argument" << std::endl;
+    // parser.AddIntArgument("--N").MultiValue(1).Positional().StoreValues(values);
+    // parser.AddFlag("-s", "--sum", "add args").StoreValue(opt.sum);
+    // parser.AddFlag("-m", "--mult", "multiply args").StoreValue(opt.mult);
+    // parser.AddHelp("Program accumulate arguments");
+    parser.AddStringArgument("-p", "--param1", "param1");
+    if (!parser.Parse(argc, argv)) {
         std::cout << parser.HelpDescription() << std::endl;
         return 1;
     }
 
-//    if(parser.Help()) {
-//        std::cout << parser.HelpDescription() << std::endl;
-//        return 0;
-//    }
+    std::cout << parser.GetStringValue("--param1") << '\n';
 
-    if(opt.sum) {
-        std::cout << "Result: " << std::accumulate(values.begin(), values.end(), 0) << std::endl;
-    } else if(opt.mult) {
-        std::cout << "Result: " << std::accumulate(values.begin(), values.end(), 1, std::multiplies<int>()) << std::endl;
-    } else {
-        std::cout << "No one options had chosen" << std::endl;
-        std::cout << parser.HelpDescription();
-        return 1;
-    }
+    // //    if(parser.Help()) {
+    // //        std::cout << parser.HelpDescription() << std::endl;
+    // //        return 0;
+    // //    }
+    //
+    // if (opt.sum) {
+    //     std::cout << "Result: " << std::accumulate(values.begin(), values.end(), 0) << std::endl;
+    // } else if (opt.mult) {
+    //     std::cout << "Result: " << std::accumulate(values.begin(), values.end(), 1, std::multiplies<int>()) <<
+    //         std::endl;
+    // } else {
+    //     std::cout << "No one options had chosen" << std::endl;
+    //     std::cout << parser.HelpDescription();
+    // }
 
     return 0;
-
 }

@@ -4,120 +4,152 @@
 #define ARG_PARSER_PAWKORCHAGIN_ARG_PARSER_H
 
 #include <iostream>
-#include <vector>
-#include <string>
 #include <map>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace ArgumentParser {
-
 class BaseArgumentConfig {
- public:
-  std::string_view GetByKey(char key);
-  std::string_view GetDescription(std::string_view name);
-  bool Contains(std::string_view);
-  void Update(char key, const char* name, const char* desc = "");
-  void MakeMulti();
+    public:
+        virtual ~BaseArgumentConfig() = default;
+        [[nodiscard]] std::string GetByKey(const std::string&);
+        std::string GetDescription(const std::string&);
+        [[nodiscard]] bool KeyContains(const std::string&) const;
+        [[nodiscard]] bool Contains(const std::string&) const;
+        void SetArgument(const std::string&, const std::string&, const std::string& desc = "");
+        virtual void MakeMulti(const std::string&);
+        [[nodiscard]] bool IsMultiValueArgument(const std::string&) const;
 
- private:
- protected:
-  std::map<char, std::string_view> keys_;
-  std::map<std::string_view, std::string_view> desc_;
-  std::set<std::string_view> used_;
-
-  bool is_multi_ = false;
+    private:
+    protected:
+        std::map<std::string, std::string> keys_;
+        std::map<std::string, std::string> desc_;
+        std::set<std::string> used_;
+        std::set<std::string> is_multi_;
 };
 
-//template<class T> struct ArgMode
+// template<class T> struct ArgMode
 
-class IntArgumentConfig : public BaseArgumentConfig {
- public:
-  void PutValue(std::string_view name, int* value);
-  void PutValues(std::string_view name, std::vector<int>* values);
-  void PutPositional(std::string_view arg);
-  int*& GetValue(std::string_view name);
-  std::vector<int>*& GetValues(std::string_view name);
-  [[nodiscard]] std::string_view GetPositional() const;
+class IntArgumentConfig final : public BaseArgumentConfig {
+    public:
+        void PutValue(const std::string& name, int* value);
+        void PutValues(const std::string& name, std::vector<int>* values);
+        void PutPositional(const std::string& arg);
+        int*& GetValue(const std::string&);
+        std::vector<int>*& GetValues(const std::string& name);
+        [[nodiscard]] std::string GetPositional() const;
+        [[nodiscard]] bool IsPositional() const;
+        void CreateValue(const std::string&, int);
+        bool IsStored(const std::string&) const;
+        // bool IsMulti
+        // [[nodiscard]] bool IsSingleArgument(std::string) const;
 
- private:
-  std::map<std::string_view, int*> names_;
-  std::map<std::string_view, std::vector<int>*> multi_;
-  std::string_view positional_{};
+    private:
+        std::map<std::string, int*> names_;
+        std::map<std::string, std::vector<int>*> multi_;
+        std::map<std::string, int> cvalue_;
+        std::string positional_{};
+        bool is_positional_ = false;
 };
 
-class StringArgumentConfig : public BaseArgumentConfig {
- public:
-  void PutValue(std::string_view name, std::string* value);
-  void PutValues(std::string_view name, std::vector<std::string>* values);
-  void PutPositional(std::string_view arg);
-  std::string*& GetValue(std::string_view name);
-  std::vector<std::string>*& GetValues(std::string_view name);
-  [[nodiscard]] std::string_view GetPositional() const;
+class StringArgumentConfig final : public BaseArgumentConfig {
+    public:
+        void PutValue(const std::string& name, std::string* value);
+        void PutValues(const std::string& name, std::vector<std::string>* values);
+        void PutPositional(const std::string& arg);
+        std::string*& GetValue(const std::string& name);
+        std::vector<std::string>*& GetValues(const std::string& name);
+        [[nodiscard]] std::string GetPositional() const;
+        [[nodiscard]] bool IsPositional() const;
+        void CreateValue(const std::string&, const std::string&);
+        [[nodiscard]] bool IsStored(const std::string&) const;
+        // void CreateValues(std::string, const std::string&);
+        // void CreateValues(std::string, )
+        // [[nodiscard]] bool IsSingleArgument(std::string) const;
 
- private:
-  std::map<std::string_view, std::string*> names_;
-  std::map<std::string_view, std::vector<std::string>*> multi_;
-  std::string_view positional_{};
+    private:
+        std::map<std::string, std::string*> names_;
+        std::map<std::string, std::vector<std::string>*> multi_;
+        std::map<std::string, std::string> cvalue_;
+        std::map<std::string, std::vector<std::string> > cvalues_;
+        std::string positional_{};
+        bool is_positional = false;
 };
 
-struct FlagConfig {
-  std::map<char, std::string_view> keys_; // [key, name]
-  std::map<std::string_view, std::string_view> desc_; // [name, desc]
-  std::map<std::string_view, bool*> names_; // [name, stored value]
+class FlagConfig final : public BaseArgumentConfig {
+    public:
+        void PutValue(std::string name, bool* value);
+        void MakeMulti(const std::string&) override;
+        bool*& GetValue(std::string name);
+
+    private:
+        std::map<std::string, bool*> names_; // [name, stored value]
 };
 
 class ArgParser {
- public:
-  explicit ArgParser(const char* name);
+    public:
+        explicit ArgParser(std::string name);
 
-  ~ArgParser();
+        ~ArgParser();
 
-  bool Parse(const std::vector<std::string>& args);
+        bool Parse(const std::vector<std::string>& args);
 
-  bool Parse(int argc, char** argv);
+        bool Parse(int argc, char** argv);
 
-  ArgParser& AddFlag(const char* name, const char* desc = "");
+        ArgParser& AddFlag(const std::string& name, const std::string& desc = "");
 
-  ArgParser& AddFlag(char key, const char* name, const char* desc = "");
+        ArgParser& AddFlag(const std::string& key,
+                           const std::string& name,
+                           const std::string& desc = "");
 
-  ArgParser& AddStringArgument(char key, const char* name, const char* desc = "");
+        ArgParser& AddStringArgument(const std::string& key,
+                                     const std::string& name,
+                                     const std::string& desc = "");
 
-  ArgParser& AddStringArgument(const char* name, const char* desc = "");
+        ArgParser& AddStringArgument(const std::string& name,
+                                     const std::string& desc = "");
 
-  ArgParser& AddIntArgument(char key, const char* name, const char* desc = "");
+        ArgParser& AddIntArgument(const std::string& key,
+                                  const std::string& name,
+                                  const std::string& desc = "");
 
-  ArgParser& AddIntArgument(const char* name, const char* desc = "");
+        ArgParser& AddIntArgument(const std::string& name, const std::string& desc = "");
 
-  ArgParser& AddHelp(const char* desc);
+        ArgParser& AddHelp(const std::string& desc);
 
-  ArgParser& StoreValue(bool& value);
+        ArgParser& StoreValue(bool& value);
 
-  ArgParser& StoreValue(int& value);
+        ArgParser& StoreValue(int& value);
 
-  ArgParser& StoreValue(std::string& value);
+        ArgParser& StoreValue(std::string& value);
 
-  ArgParser& MultiValue(uint min_count = 0);
+        ArgParser& MultiValue(uint min_count = 0);
 
-  ArgParser& StoreValues(std::vector<std::string>& values);
+        ArgParser& StoreValues(std::vector<std::string>& values);
 
-  ArgParser& StoreValues(std::vector<int>& values);
+        ArgParser& StoreValues(std::vector<int>& values);
 
-  ArgParser& Positional();
+        ArgParser& Positional();
 
-  bool Help() const;
+        std::string& GetStringValue(const std::string& name);
 
-  [[nodiscard]] std::string HelpDescription() const;
+        int& GetIntValue(const std::string& name);
 
- private:
-  const char* program_name_;
-  std::string_view cur_arg_{};
+        [[nodiscard]] bool Help() const;
 
-  bool is_added_help_ = false;
+        [[nodiscard]] std::string HelpDescription() const;
 
-  FlagConfig flags_;
-  IntArgumentConfig int_args_;
-  StringArgumentConfig str_args_;
+    private:
+        std::string program_name_;
+        std::string cur_arg_{};
+
+        bool is_added_help_ = false;
+
+        FlagConfig flags_;
+        IntArgumentConfig int_args_;
+        StringArgumentConfig str_args_;
 };
-}
+} // namespace ArgumentParser
 
-#endif //ARG_PARSER_PAWKORCHAGIN_ARG_PARSER_H
+#endif // ARG_PARSER_PAWKORCHAGIN_ARG_PARSER_H
