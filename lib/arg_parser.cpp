@@ -64,17 +64,9 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
             std::errc{}
             && int_args_
             .IsPositional()) {
-            if (int_args_.IsStored(int_args_.GetPositional()))
-                int_args_.GetValues(int_args_.GetPositional())->push_back(result);
-            else {
-                //TODO
-            }
+            int_args_.SetParcedArgument(int_args_.GetPositional(), result);
         } else if (str_args_.IsPositional()) {
-            if (str_args_.IsStored(str_args_.GetPositional()))
-                str_args_.GetValues(str_args_.GetPositional())->push_back(args[i]);
-            else {
-                //TODO
-            }
+            str_args_.SetParcedArgument(str_args_.GetPositional(), args[i]);
         } else {
             bool is_any_wrong_key = false;
 
@@ -196,19 +188,7 @@ int ArgParser::IsArgument(const std::vector<std::string>& args, size_t& i) {
             }
         }
 
-        if (str_args_.IsMultiValueArgument(arg)) {
-            if (str_args_.IsStored(arg)) {
-                str_args_.GetValues(arg)->push_back(value);
-            } else {
-                //TODO create multivalue
-            }
-        } else {
-            if (str_args_.IsStored(arg)) {
-                *str_args_.GetValue(arg) = value;
-            } else {
-                str_args_.CreateValue(arg, value);
-            }
-        }
+        str_args_.SetParcedArgument(arg, value);
         return 1;
     }
     if (int_args_.Contains(arg) || int_args_.KeyContains(arg)) {
@@ -362,6 +342,7 @@ void BaseArgumentConfig::MakeMulti(const std::string& arg) {
 bool BaseArgumentConfig::IsMultiValueArgument(const std::string& arg) const {
     return is_multi_.contains(arg);
 }
+
 const std::set<std::string>& BaseArgumentConfig::GetUsedArgumentsList() {
     return used_;
 }
@@ -410,6 +391,18 @@ void StringArgumentConfig::CreateValue(const std::string& name, const std::strin
     names_.insert({name, &cvalue_[name]});
 }
 
+void StringArgumentConfig::CreateValues(const std::string& name) {
+    cvalues_.insert({name, {}});
+    multi_.insert({name, &cvalues_[name]});
+}
+
+void StringArgumentConfig::AddValue(const std::string& arg, std::string value) {
+    if (!multi_.contains(arg)) {
+        PrintError("Can't set multi value argument:", arg);
+    }
+    cvalues_[arg].push_back(value);
+}
+
 bool StringArgumentConfig::IsStored(const std::string& arg) const {
     return names_.contains(arg) || multi_.contains(arg);
 }
@@ -417,6 +410,25 @@ bool StringArgumentConfig::IsStored(const std::string& arg) const {
 void StringArgumentConfig::SetDefault(const std::string& arg, const std::string& value) {
     this->CreateValue(arg, value);
     is_default_.insert(arg);
+}
+
+void StringArgumentConfig::SetParcedArgument(const std::string& arg, const std::string value) {
+    if (this->IsMultiValueArgument(arg)) {
+        if (this->IsStored(arg)) {
+            this->GetValues(arg)->push_back(value);
+        } else {
+            if (!multi_.contains(arg)) {
+                this->CreateValues(arg);
+            }
+            this->AddValue(arg, value);
+        }
+    } else {
+        if (this->IsStored(arg)) {
+            *this->GetValue(arg) = value;
+        } else {
+            this->CreateValue(arg, value);
+        }
+    }
 }
 
 // void StringArgumentConfig::CreateValues(std::string name, const std::string& value) {

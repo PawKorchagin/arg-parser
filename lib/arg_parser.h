@@ -72,8 +72,11 @@ class StringArgumentConfig final : public BaseArgumentConfig {
         [[nodiscard]] std::string GetPositional() const;
         [[nodiscard]] bool IsPositional() const;
         void CreateValue(const std::string&, const std::string&);
+        void CreateValues(const std::string&);
+        void AddValue(const std::string&, std::string);
         [[nodiscard]] bool IsStored(const std::string&) const;
         void SetDefault(const std::string&, const std::string&);
+        void SetParcedArgument(const std::string&, std::string);
         // void CreateValues(std::string, const std::string&);
         // void CreateValues(std::string, )
         // [[nodiscard]] bool IsSingleArgument(std::string) const;
