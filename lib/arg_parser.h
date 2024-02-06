@@ -13,15 +13,16 @@ namespace ArgumentParser {
 class BaseArgumentConfig {
     public:
         virtual ~BaseArgumentConfig() = default;
-        [[nodiscard]] std::string GetByKey(const std::string&);
-        std::string GetDescription(const std::string&);
+        [[nodiscard]] std::string GetByKey(const std::string&) const;
+        [[nodiscard]] std::string GetDescription(const std::string&) const;
         [[nodiscard]] bool KeyContains(const std::string&) const;
         [[nodiscard]] bool Contains(const std::string&) const;
         void SetArgument(const std::string&, const std::string&, const std::string& desc = "");
         virtual void MakeMulti(const std::string&);
         [[nodiscard]] bool IsMultiValueArgument(const std::string&) const;
-        const std::set<std::string>& GetUsedArgumentsList();
+        [[nodiscard]] const std::set<std::string>& GetUsedArgumentsList() const;
         [[nodiscard]] bool IsDefault(const std::string&) const;
+        [[nodiscard]] std::vector<std::string> GetKeyArgumentsList() const;
 
     private:
     protected:
@@ -150,7 +151,7 @@ class ArgParser {
 
         ArgParser& Positional();
 
-        std::string& GetStringValue(const std::string&);
+        std::string& GetStringValue(const char*);
 
         int& GetIntValue(const std::string&);
 
@@ -160,25 +161,14 @@ class ArgParser {
 
         [[nodiscard]] std::string HelpDescription() const;
 
-        template<class T>
-        ArgParser& Default(T value) {
-            if (std::is_same_v<T, int>) {
-                int_args_.SetDefault(cur_arg_, value);
-                // int_args_.CreateValue(value);
-            }
-            if (std::is_same_v<T, const std::basic_string<char>>) {
-                str_args_.SetDefault(cur_arg_, std::to_string(value));
-                // str_args_.CreateValue(value);
-            }
-            if (std::is_same_v<T, bool>) {
-                flags_.SetDefault(cur_arg_, value);
-                // flags_.CreateValue(value);
-            }
-            return *this;
-        }
+        ArgParser& Default(int);
+
+        ArgParser& Default(bool);
+
+        ArgParser& Default(const char*);
 
     private:
-        bool IsArgumentCoincidence();
+        [[nodiscard]] bool IsArgumentCoincidence() const;
         int IsArgument(const std::vector<std::string>&, size_t&);
 
         std::string program_name_;

@@ -33,13 +33,29 @@ TEST(ArgParserTestSuite, ShortNameTest) {
     ASSERT_EQ(parser.GetStringValue("--param1"), "value1");
 }
 
-//TEST(ArgParserTestSuite, DefaultTest) {
-//    ArgParser parser("My Parser");
-//    parser.AddStringArgument("param1").Default("value1");
-//
-//    ASSERT_TRUE(parser.Parse(SplitString("app")));
-//    ASSERT_EQ(parser.GetStringValue("param1"), "value1");
-//}
+TEST(ArgParserTestSuite, DefaultStringTest) {
+    ArgParser parser("My Parser");
+    parser.AddStringArgument("--param1").Default("value1");
+
+    ASSERT_TRUE(parser.Parse(SplitString("app")));
+    ASSERT_EQ(parser.GetStringValue("--param1"), "value1");
+}
+
+TEST(ArgParserTestSuite, DefaultIntTest) {
+    ArgParser parser("My Parser");
+    parser.AddIntArgument("--param1").Default(5);
+
+    ASSERT_TRUE(parser.Parse(SplitString("app")));
+    ASSERT_EQ(parser.GetIntValue("--param1"), 5);
+}
+
+TEST(ArgParserTestSuite, DefaultFlagTest) {
+    ArgParser parser("My Parser");
+    parser.AddFlag("--param1").Default(true);
+
+    ASSERT_TRUE(parser.Parse(SplitString("app")));
+    ASSERT_EQ(parser.GetFlag("--param1"), true);
+}
 
 //TEST(ArgParserTestSuite, NoDefaultTest) {
 //    ArgParser parser("My Parser");
@@ -159,7 +175,16 @@ TEST(ArgParserTestSuite, WrongArgumentTest) {
     ASSERT_FALSE(parser.Parse(SplitString("app --exist? no")));
 }
 
-TEST(ArgParserTestSuite, PositionalArgTest) {
+TEST(ArgParserTestSuite, PostionalArgTest) {
+    ArgParser parser("My Parser");
+    int value;
+    parser.AddIntArgument("--Param1").Positional().StoreValue(value);
+
+    ASSERT_TRUE(parser.Parse(SplitString("app 1")));
+    ASSERT_EQ(value, 1);
+}
+
+TEST(ArgParserTestSuite, PositionalMultiValueArgTest) {
     ArgParser parser("My Parser");
     std::vector<int> values;
     parser.AddIntArgument("--Param1").MultiValue(1).Positional().StoreValues(values);
@@ -178,27 +203,27 @@ TEST(ArgParserTestSuite, HelpTest) {
     ASSERT_TRUE(parser.Help());
 }
 
-// TEST(ArgParserTestSuite, DoubleSameTypePositionalArgumentTest) {
-//     ArgParser parser("My parser");
-//     std::vector<int> values;
-//     int value;
-//     bool sum;
-//
-//     parser.AddIntArgument("--pos-str").MultiValue().Positional().StoreValues(values);
-//     parser.AddIntArgument("--pos-str-single").Positional().StoreValue(value);
-//     parser.AddFlag("--sum").StoreValue(sum);
-//
-//     ASSERT_TRUE(parser.Parse(SplitString("app 1 2 3 4 5 --sum")));
-//     ASSERT_EQ(sum, true);
-//     if (sum) {
-//         int res = 0;
-//         for (auto& i : values)
-//             res += i;
-//
-//         ASSERT_EQ(res, 0);
-//         ASSERT_EQ(value, 5);
-//     }
-// }
+TEST(ArgParserTestSuite, DoubleSameTypePositionalArgumentTest) {
+    ArgParser parser("My parser");
+    std::vector<int> values;
+    int value;
+    bool sum;
+
+    parser.AddIntArgument("--pos-str").MultiValue().Positional().StoreValues(values);
+    parser.AddIntArgument("--pos-str-single").Positional().StoreValue(value);
+    parser.AddFlag("--sum").StoreValue(sum);
+
+    ASSERT_TRUE(parser.Parse(SplitString("app 1 2 3 4 5 --sum")));
+    ASSERT_EQ(sum, true);
+    if (sum) {
+        int res = 0;
+        for (auto& i : values)
+            res += i;
+
+        ASSERT_EQ(res, 0);
+        ASSERT_EQ(value, 5);
+    }
+}
 
 // TEST(ArgParserTestSuite, HelpStringTest) {
 //     ArgParser parser("My Parser");
@@ -209,7 +234,6 @@ TEST(ArgParserTestSuite, HelpTest) {
 //     parser.AddIntArgument("--number", "Some Number");
 //     parser.AddStringArgument("--pos-int", "string positional argument").MultiValue().Positional();
 //     parser.AddIntArgument("--pos-str").Positional();
-//     parser.AddStringArgument("--pos-str-multi").MultiValue();
 //
 //     ASSERT_TRUE(parser.Parse(SplitString("app --help")));
 //     ASSERT_EQ(

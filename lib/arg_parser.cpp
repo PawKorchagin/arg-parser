@@ -2,6 +2,7 @@
 #include <charconv>
 #include <algorithm>
 #include <utility>
+#include <iomanip>
 
 #include "arg_parser.h"
 
@@ -140,13 +141,44 @@ std::string ArgParser::HelpDescription() const {
     std::stringstream out;
 
     if (!is_added_help_) {
-        out << "No info had provided yet";
+        out << "No help info provided";
+        return out.str();
+    }
+
+    out << program_name_ << '\n';
+    out << flags_.GetDescription("--help") << '\n';
+    out << '\n';
+
+    const auto& int_used = int_args_.GetUsedArgumentsList();
+    const auto& string_used = str_args_.GetUsedArgumentsList();
+    const auto& flag_used = flags_.GetUsedArgumentsList();
+
+
+
+    const auto& int_keys = int_args_.GetKeyArgumentsList();
+    const auto& string_keys = str_args_.GetKeyArgumentsList();
+    const auto& flag_keys = flags_.GetKeyArgumentsList();
+
+    for (auto& key_arg : int_keys) {
+        // out << std::setw(4) << key_arg << ", " <<
     }
 
     return out.str();
 }
+ArgParser& ArgParser::Default(const int value) {
+    int_args_.SetDefault(cur_arg_, value);
+    return *this;
+}
+ArgParser& ArgParser::Default(const bool value) {
+    flags_.SetDefault(cur_arg_, value);
+    return *this;
+}
+ArgParser& ArgParser::Default(const char* value) {
+    str_args_.SetDefault(cur_arg_, value);
+    return *this;
+}
 
-bool ArgParser::IsArgumentCoincidence() {
+bool ArgParser::IsArgumentCoincidence() const {
     std::vector<std::string_view> ins1, ins2, ins3;
     auto flags = flags_.GetUsedArgumentsList();
     auto ints = int_args_.GetUsedArgumentsList();
@@ -278,7 +310,7 @@ ArgParser& ArgParser::Positional() {
     return *this;
 }
 
-std::string& ArgParser::GetStringValue(const std::string& name) {
+std::string& ArgParser::GetStringValue(const char* name) {
     return *str_args_.GetValue(name);
 }
 
@@ -315,12 +347,17 @@ ArgParser& ArgParser::StoreValues(std::vector<int>& values) {
 
 ArgParser::~ArgParser() = default;
 
-std::string BaseArgumentConfig::GetByKey(const std::string& key) {
-    return keys_[key];
+std::string BaseArgumentConfig::GetByKey(const std::string& key) const {
+    if (!keys_.contains(key)) {
+        PrintError("Can't find key argument", key);
+    }
+    return keys_.at(key);
 }
 
-std::string BaseArgumentConfig::GetDescription(const std::string& name) {
-    return desc_[name];
+std::string BaseArgumentConfig::GetDescription(const std::string& name) const {
+    if (!desc_.contains(name))
+        PrintError("Can't find description for arugment", name);
+    return desc_.at(name);
 }
 
 bool BaseArgumentConfig::KeyContains(const std::string& key) const {
@@ -343,11 +380,20 @@ bool BaseArgumentConfig::IsMultiValueArgument(const std::string& arg) const {
     return is_multi_.contains(arg);
 }
 
-const std::set<std::string>& BaseArgumentConfig::GetUsedArgumentsList() {
+const std::set<std::string>& BaseArgumentConfig::GetUsedArgumentsList() const {
     return used_;
 }
 bool BaseArgumentConfig::IsDefault(const std::string& arg) const {
     return is_default_.contains(arg);
+}
+
+std::vector<std::string> BaseArgumentConfig::GetKeyArgumentsList() const {
+    std::vector<std::string> res;
+    res.reserve(keys_.size());
+    for (auto& [key, _] : keys_) {
+        res.push_back(key);
+    }
+    return res;
 }
 
 void StringArgumentConfig::PutValue(const std::string& name, std::string* value) {
@@ -363,7 +409,7 @@ std::string*& StringArgumentConfig::GetValue(const std::string& name) {
         PrintError("No such argument in parser:", name);
         exit(EXIT_FAILURE);
     }
-    return names_[name];
+    return names_.at(name);
 }
 
 void StringArgumentConfig::PutValues(const std::string& name,
@@ -388,19 +434,19 @@ bool StringArgumentConfig::IsPositional() const {
 
 void StringArgumentConfig::CreateValue(const std::string& name, const std::string& value) {
     cvalue_.insert({name, value});
-    names_.insert({name, &cvalue_[name]});
+    names_.insert({name, &cvalue_.at(name)});
 }
 
 void StringArgumentConfig::CreateValues(const std::string& name) {
     cvalues_.insert({name, {}});
-    multi_.insert({name, &cvalues_[name]});
+    multi_.insert({name, &cvalues_.at(name)});
 }
 
 void StringArgumentConfig::AddValue(const std::string& arg, std::string value) {
     if (!multi_.contains(arg)) {
         PrintError("Can't set multi value argument:", arg);
     }
-    cvalues_[arg].push_back(value);
+    cvalues_.at(arg).push_back(value);
 }
 
 bool StringArgumentConfig::IsStored(const std::string& arg) const {
@@ -441,7 +487,7 @@ void StringArgumentConfig::SetParcedArgument(const std::string& arg, const std::
 
 std::vector<std::string>*&
 StringArgumentConfig::GetValues(const std::string& name) {
-    return multi_[name];
+    return multi_.at(name);
 }
 
 void IntArgumentConfig::PutValue(const std::string& name, int* value) {
@@ -462,10 +508,10 @@ int*& IntArgumentConfig::GetValue(const std::string& name) {
         PrintError("No such argument in parser:", name);
         exit(EXIT_FAILURE);
     }
-    return names_[name];
+    return names_.at(name);
 }
 std::vector<int>*& IntArgumentConfig::GetValues(const std::string& name) {
-    return multi_[name];
+    return multi_.at(name);
 }
 std::string IntArgumentConfig::GetPositional() const {
     return positional_;
