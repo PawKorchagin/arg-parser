@@ -4,8 +4,6 @@
 #include <iostream>
 #include <numeric>
 
-#include "unordered_map"
-
 struct Options {
     bool sum = false;
     bool mult = false;

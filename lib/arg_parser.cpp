@@ -2,8 +2,6 @@
 #include <charconv>
 #include <algorithm>
 #include <utility>
-// #include <boost/range/adaptor/map.hpp>
-// #include <boost/range/algorithm/copy.hpp>
 
 #include "arg_parser.h"
 
@@ -614,7 +612,7 @@ void IntArgumentConfig::CreateValues(const std::string& name) {
     cvalues_.insert({name, {}});
     multi_.insert({name, &cvalues_[name]});
 }
-void IntArgumentConfig::AddValue(const std::string& name, int value) {
+void IntArgumentConfig::AddValue(const std::string& name, const int value) {
     if (!cvalues_.contains(name)) {
         PrintError("Can't set multi value argument:", name);
     }

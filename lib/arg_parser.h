@@ -57,8 +57,6 @@ class BaseArgumentConfig {
         std::set<std::string> is_multi_;
 };
 
-// template<class T> struct ArgMode
-
 class IntArgumentConfig final : public BaseArgumentConfig {
     public:
         void PutValue(const std::string& name, int* value);
@@ -75,9 +73,6 @@ class IntArgumentConfig final : public BaseArgumentConfig {
         void SetDefault(const std::string&, int);
         void SetParcedArgument(const std::string&, int);
         [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
-
-        // bool IsMulti
-        // [[nodiscard]] bool IsSingleArgument(std::string) const;
 
     private:
         std::map<std::string, int*> names_;
