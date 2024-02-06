@@ -7,7 +7,7 @@
 
 #include "arg_parser.h"
 
-// namespace {
+namespace {
 void PrintError(const std::string_view msg, const std::string_view spec) {
     std::cerr << "Error: " << msg << ' ' << spec << '\n';
 }
@@ -18,6 +18,7 @@ void PrintWarning(const std::string_view msg, const std::string_view spec = "") 
 
 std::string MergeChars(const char a, const char b) {
     return std::string() + a + b;
+}
 }
 
 namespace ArgumentParser {
@@ -40,7 +41,7 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
     if (IsArgumentCoincidence())
         return false;
 
-    for (auto& elem : args) {
+    for (auto& elem: args) {
         if (elem == "--help" || elem == "-h") {
             is_added_help_ = true;
             return true;
@@ -59,13 +60,14 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
 
             i += j;
 
-            if (is_argument == -1)
+            if (is_argument == ArgumentCheckStatus::kParsingFailure)
                 return false;
 
-            if (is_argument == 1)
+            if (is_argument == ArgumentCheckStatus::kCorrectArgument)
                 continue;
         }
 
+        //ArgumentCheckStatus::kIncorrectArgument
         if (int result = 0 ; std::from_chars(args[i].data(), args[i].data() + args[i].size(), result).ec ==
             std::errc{}
             && int_args_
@@ -101,7 +103,9 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
                 cur_arg_config.push_back(args[i + 1]);
             size_t delta = 0;
 
-            if (this->IsArgument(cur_arg_config, delta) != 1)
+            if (const auto is_argument = this->IsArgument(cur_arg_config, delta) ; is_argument ==
+                ArgumentCheckStatus::kParsingFailure || is_argument ==
+                ArgumentCheckStatus::kIncorrectArgument)
                 return false;
 
             i += delta;
@@ -145,7 +149,7 @@ ArgParser& ArgParser::StoreValue(bool& value) {
 std::string ArgParser::HelpDescription() const {
     std::stringstream out;
 
-    if (!is_added_help_) {
+    if (!flags_.Contains("--help")) {
         out << "No help info provided";
         return out.str();
     }
@@ -175,6 +179,7 @@ std::string ArgParser::HelpDescription() const {
 
     return out.str();
 }
+
 ArgParser& ArgParser::Default(const int value) {
     int_args_.SetDefault(cur_arg_, value);
     return *this;
@@ -199,7 +204,7 @@ bool ArgParser::IsArgumentCoincidence() const {
     return !ins1.empty() || !ins2.empty() || !ins3.empty();
 }
 
-int ArgParser::IsArgument(const std::vector<std::string>& args, size_t& i) {
+ArgumentCheckStatus ArgParser::IsArgument(const std::vector<std::string>& args, size_t& i) {
     std::string arg = args[i].substr(0, args[i].find('='));
     std::string value = args[i].substr(args[i].find('=') + 1);
 
@@ -213,7 +218,7 @@ int ArgParser::IsArgument(const std::vector<std::string>& args, size_t& i) {
         } else {
             flags_.CreateValue(arg);
         }
-        return 1;
+        return ArgumentCheckStatus::kCorrectArgument;
     }
 
     if (str_args_.Contains(arg) || str_args_.KeyContains(arg)) {
@@ -226,12 +231,13 @@ int ArgParser::IsArgument(const std::vector<std::string>& args, size_t& i) {
             } else if (!str_args_.IsDefault(arg)) {
                 PrintWarning("Non-default argument missing value");
 
-                return -1;
+                return ArgumentCheckStatus::kParsingFailure;
             }
         }
 
         str_args_.SetParcedArgument(arg, value);
-        return 1;
+
+        return ArgumentCheckStatus::kCorrectArgument;
     }
     if (int_args_.Contains(arg) || int_args_.KeyContains(arg)) {
         int res;
@@ -243,37 +249,37 @@ int ArgParser::IsArgument(const std::vector<std::string>& args, size_t& i) {
                 if (ec == std::errc::invalid_argument) {
                     PrintWarning("Given string instead int positional argument");
 
-                    return -1;
+                    return ArgumentCheckStatus::kParsingFailure;
                 }
                 if (ec == std::errc::result_out_of_range) {
                     PrintWarning("Given number more than an int");
 
-                    return -1;
+                    return ArgumentCheckStatus::kParsingFailure;
                 }
             } else if (!int_args_.IsDefault(arg)) {
                 PrintWarning("Non-default argument missing value");
 
-                return -1;
+                return ArgumentCheckStatus::kParsingFailure;
             }
         } else {
             auto [_, ec] = std::from_chars(value.data(), value.data() + value.size(), res);
             if (ec == std::errc::invalid_argument) {
                 PrintWarning("Not a number given as int argument");
 
-                return -1;
+                return ArgumentCheckStatus::kParsingFailure;
             }
             if (ec == std::errc::result_out_of_range) {
                 PrintWarning("Given number more than an int");
 
-                return -1;
+                return ArgumentCheckStatus::kParsingFailure;
             }
         }
         int_args_.SetParcedArgument(arg, res);
 
-        return 1;
+        return ArgumentCheckStatus::kCorrectArgument;
     }
 
-    return 0;
+    return ArgumentCheckStatus::kIncorrectArgument;
 }
 
 ArgParser& ArgParser::AddStringArgument(const std::string& name,
@@ -420,7 +426,7 @@ std::string BaseArgumentConfig::GetArgumentHelpDescription(const char* type, con
     if (!key.empty()) out << ", ";
     else out << "    ";
     out << arg;
-    if (!std::strcmp(type, "flag")) out << "=<" << type << ">";
+    if (std::strcmp(type, "flag") != 0) out << "=<" << type << ">";
     out << ",";
     if (!desc.empty()) out << " ";
     if (arg != "--help") out << desc;

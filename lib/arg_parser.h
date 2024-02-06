@@ -23,6 +23,10 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T> vec) {
 }
 
 namespace ArgumentParser {
+enum class ArgumentCheckStatus {
+    kCorrectArgument, kParsingFailure, kIncorrectArgument
+};
+
 class BaseArgumentConfig {
     public:
         virtual ~BaseArgumentConfig() = default;
@@ -192,7 +196,7 @@ class ArgParser {
 
     private:
         [[nodiscard]] bool IsArgumentCoincidence() const;
-        int IsArgument(const std::vector<std::string>&, size_t&);
+        ArgumentCheckStatus IsArgument(const std::vector<std::string>&, size_t&);
 
         std::string program_name_;
         std::string cur_arg_{};
