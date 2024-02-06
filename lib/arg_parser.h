@@ -197,6 +197,7 @@ class ArgParser {
     private:
         [[nodiscard]] bool IsArgumentCoincidence() const;
         ArgumentCheckStatus IsArgument(const std::vector<std::string>&, size_t&);
+        [[nodiscard]] bool IsUnusedNoDefaultArgument() const;
 
         std::string program_name_;
         std::string cur_arg_{};

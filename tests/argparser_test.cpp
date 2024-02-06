@@ -57,12 +57,26 @@ TEST(ArgParserTestSuite, DefaultFlagTest) {
     ASSERT_EQ(parser.GetFlag("--param1"), true);
 }
 
-// TEST(ArgParserTestSuite, NoDefaultTest) {
-//     ArgParser parser("My Parser");
-//     parser.AddStringArgument("param1");
-//
-//     ASSERT_FALSE(parser.Parse(SplitString("app")));
-// }
+TEST(ArgParserTestSuite, NoDefaultIntTest) {
+    ArgParser parser("My Parser");
+    parser.AddIntArgument("--param1");
+
+    ASSERT_FALSE(parser.Parse(SplitString("app")));
+}
+
+TEST(ArgParserTestSuite, NoDefaultStringTest) {
+    ArgParser parser("My Parser");
+    parser.AddStringArgument("--param1");
+
+    ASSERT_FALSE(parser.Parse(SplitString("app")));
+}
+
+TEST(ArgParserTestSuite, NoDefaultFlagTest) {
+    ArgParser parser("My Parser");
+    parser.AddFlag("--param1");
+
+    ASSERT_FALSE(parser.Parse(SplitString("app")));
+}
 
 TEST(ArgParserTestSuite, StoreValueTest) {
     ArgParser parser("My Parser");

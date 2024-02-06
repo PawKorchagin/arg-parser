@@ -117,7 +117,7 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
         }
     }
 
-    return true;
+    return !IsUnusedNoDefaultArgument();
 }
 
 bool ArgParser::Parse(int argc, char** argv) {
@@ -280,6 +280,28 @@ ArgumentCheckStatus ArgParser::IsArgument(const std::vector<std::string>& args, 
     }
 
     return ArgumentCheckStatus::kIncorrectArgument;
+}
+
+bool ArgParser::IsUnusedNoDefaultArgument() const {
+    const auto& ints = int_args_.GetUsedArgumentsList();
+    const auto& strings = str_args_.GetUsedArgumentsList();
+    const auto& flags = flags_.GetUsedArgumentsList();
+
+    bool is_any_unused_nodefault = false;
+
+    for (auto& arg: ints) {
+        is_any_unused_nodefault |= !int_args_.IsDefault(arg) && !int_args_.IsStored(arg);
+    }
+
+    for (auto& arg: strings) {
+        is_any_unused_nodefault |= !str_args_.IsDefault(arg) && !str_args_.IsStored(arg);
+    }
+
+    for (auto& arg: flags) {
+        is_any_unused_nodefault |= !flags_.IsDefault(arg) && !flags_.IsStored(arg) && arg != "--help";
+    }
+
+    return is_any_unused_nodefault;
 }
 
 ArgParser& ArgParser::AddStringArgument(const std::string& name,
@@ -602,10 +624,12 @@ void IntArgumentConfig::AddValue(const std::string& name, int value) {
 bool IntArgumentConfig::IsStored(const std::string& arg) const {
     return names_.contains(arg) || multi_.contains(arg);
 }
-void IntArgumentConfig::SetDefault(const std::string& arg, int value) {
+
+void IntArgumentConfig::SetDefault(const std::string& arg, const int value) {
     this->CreateValue(arg, value);
     is_default_.insert(arg);
 }
+
 void IntArgumentConfig::SetParcedArgument(const std::string& arg, const int value) {
     if (this->IsMultiValueArgument(arg)) {
         if (this->IsStored(arg)) {
