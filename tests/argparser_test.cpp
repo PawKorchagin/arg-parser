@@ -57,12 +57,12 @@ TEST(ArgParserTestSuite, DefaultFlagTest) {
     ASSERT_EQ(parser.GetFlag("--param1"), true);
 }
 
-//TEST(ArgParserTestSuite, NoDefaultTest) {
-//    ArgParser parser("My Parser");
-//    parser.AddStringArgument("param1");
+// TEST(ArgParserTestSuite, NoDefaultTest) {
+//     ArgParser parser("My Parser");
+//     parser.AddStringArgument("param1");
 //
-//    ASSERT_FALSE(parser.Parse(SplitString("app")));
-//}
+//     ASSERT_FALSE(parser.Parse(SplitString("app")));
+// }
 
 TEST(ArgParserTestSuite, StoreValueTest) {
     ArgParser parser("My Parser");
@@ -217,7 +217,7 @@ TEST(ArgParserTestSuite, DoubleSameTypePositionalArgumentTest) {
     ASSERT_EQ(sum, true);
     if (sum) {
         int res = 0;
-        for (auto& i : values)
+        for (auto& i: values)
             res += i;
 
         ASSERT_EQ(res, 0);
@@ -225,27 +225,28 @@ TEST(ArgParserTestSuite, DoubleSameTypePositionalArgumentTest) {
     }
 }
 
-// TEST(ArgParserTestSuite, HelpStringTest) {
-//     ArgParser parser("My Parser");
-//     parser.AddHelp("Some Description about program");
-//     parser.AddStringArgument("-i", "--input", "File path for input file").MultiValue(1);
-//     parser.AddFlag("-s", "--flag1", "Use some logic").Default(true);
-//     parser.AddFlag("-p", "--flag2", "Use some logic");
-//     parser.AddIntArgument("--number", "Some Number");
-//     parser.AddStringArgument("--pos-int", "string positional argument").MultiValue().Positional();
-//     parser.AddIntArgument("--pos-str").Positional();
-//
-//     ASSERT_TRUE(parser.Parse(SplitString("app --help")));
-//     ASSERT_EQ(
-//         parser.HelpDescription(),
-//         "My Parser\n"
-//         "Some Description about program\n"
-//         "\n"
-//         "    --number=<int>, Some Number\n"
-//         "-i, --input=<string>, File path for input file [repeated, min args = 1]\n"
-//         "-p, --flag2, Use some logic\n"
-//         "-s, --flag1, Use some logic [default = true]\n"
-//         "\n"
-//         "-h, --help Display this help and exit\n"
-//     );
-// }
+TEST(ArgParserTestSuite, HelpStringTest) {
+    ArgParser parser("My Parser");
+    parser.AddHelp("Some Description about program");
+    parser.AddStringArgument("-i", "--input", "File path for input file").MultiValue(1);
+    parser.AddFlag("-s", "--flag1", "Use some logic").Default(true);
+    parser.AddFlag("-p", "--flag2", "Use some logic");
+    parser.AddIntArgument("--number", "Some Number");
+    parser.AddStringArgument("--pos-int", "string positional argument").MultiValue().Positional();
+    parser.AddIntArgument("--pos-str").Positional();
+
+    ASSERT_TRUE(parser.Parse(SplitString("app --help")));
+    ASSERT_EQ(
+        parser.HelpDescription(),
+        "My Parser\n"
+        "Some Description about program\n"
+        "\n"
+        "    --number=<int>, Some Number\n"
+        "    --pos-str=<int>, [positional]\n"
+        "-i, --input=<string>, File path for input file [repeated]\n"
+        "    --pos-int=<string>, string positional argument [repeated, positional]\n"
+        "-s, --flag1, Use some logic [default = true]\n"
+        "-p, --flag2, Use some logic\n"
+        "-h, --help, Display this help and exit\n"
+    );
+}

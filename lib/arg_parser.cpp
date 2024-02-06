@@ -2,7 +2,8 @@
 #include <charconv>
 #include <algorithm>
 #include <utility>
-#include <iomanip>
+// #include <boost/range/adaptor/map.hpp>
+// #include <boost/range/algorithm/copy.hpp>
 
 #include "arg_parser.h"
 
@@ -149,19 +150,24 @@ std::string ArgParser::HelpDescription() const {
     out << flags_.GetDescription("--help") << '\n';
     out << '\n';
 
-    const auto& int_used = int_args_.GetUsedArgumentsList();
-    const auto& string_used = str_args_.GetUsedArgumentsList();
-    const auto& flag_used = flags_.GetUsedArgumentsList();
+    const auto& ints = int_args_.GetUsedArgumentsList();
+    const auto& strings = str_args_.GetUsedArgumentsList();
+    const auto& flags = flags_.GetUsedArgumentsList();
 
-
-
-    const auto& int_keys = int_args_.GetKeyArgumentsList();
-    const auto& string_keys = str_args_.GetKeyArgumentsList();
-    const auto& flag_keys = flags_.GetKeyArgumentsList();
-
-    for (auto& key_arg : int_keys) {
-        // out << std::setw(4) << key_arg << ", " <<
+    for (auto& arg: ints) {
+        out << int_args_.GetArgumentHelpDescription("int", arg) << int_args_.GetExtraArgumentsDescription(arg) << "\n";
     }
+
+    for (auto& arg: strings) {
+        out << str_args_.GetArgumentHelpDescription("string", arg) << str_args_.GetExtraArgumentsDescription(arg) <<
+            "\n";
+    }
+
+    for (auto& arg: flags) {
+        out << flags_.GetArgumentHelpDescription("flag", arg) << flags_.GetExtraArgumentsDescription(arg) << "\n";
+    }
+
+    // out << flags_.GetArgumentsHelpDescription("")
 
     return out.str();
 }
@@ -355,9 +361,9 @@ std::string BaseArgumentConfig::GetByKey(const std::string& key) const {
 }
 
 std::string BaseArgumentConfig::GetDescription(const std::string& name) const {
-    if (!desc_.contains(name))
-        PrintError("Can't find description for arugment", name);
-    return desc_.at(name);
+    if (!used_.contains(name))
+        PrintError("Can't find argument", name);
+    return used_.at(name).desc_;
 }
 
 bool BaseArgumentConfig::KeyContains(const std::string& key) const {
@@ -367,9 +373,8 @@ bool BaseArgumentConfig::KeyContains(const std::string& key) const {
 void BaseArgumentConfig::SetArgument(const std::string& key,
                                      const std::string& name,
                                      const std::string& desc) {
-    used_.insert(name);
+    used_.insert({name, ArgumentMainData{key, desc}});
     keys_.insert({key, name});
-    desc_.insert({name, desc});
 }
 
 void BaseArgumentConfig::MakeMulti(const std::string& arg) {
@@ -380,9 +385,14 @@ bool BaseArgumentConfig::IsMultiValueArgument(const std::string& arg) const {
     return is_multi_.contains(arg);
 }
 
-const std::set<std::string>& BaseArgumentConfig::GetUsedArgumentsList() const {
-    return used_;
+std::vector<std::string> BaseArgumentConfig::GetUsedArgumentsList() const {
+    std::vector<std::string> keys;
+    keys.reserve(used_.size());
+    for (const auto& [key, _]: used_)
+        keys.push_back(key);
+    return keys;
 }
+
 bool BaseArgumentConfig::IsDefault(const std::string& arg) const {
     return is_default_.contains(arg);
 }
@@ -390,10 +400,33 @@ bool BaseArgumentConfig::IsDefault(const std::string& arg) const {
 std::vector<std::string> BaseArgumentConfig::GetKeyArgumentsList() const {
     std::vector<std::string> res;
     res.reserve(keys_.size());
-    for (auto& [key, _] : keys_) {
+    for (auto& [key, _]: keys_) {
         res.push_back(key);
     }
     return res;
+}
+
+ArgumentMainData BaseArgumentConfig::GetArgumentMainData(const std::string& arg) const {
+    if (!used_.contains(arg))
+        PrintError("Can't find argument", arg);
+    return used_.at(arg);
+}
+
+std::string BaseArgumentConfig::GetArgumentHelpDescription(const char* type, const std::string& arg) const {
+    std::stringstream out;
+    auto& [key, desc] = used_.at(arg);
+
+    out << key;
+    if (!key.empty()) out << ", ";
+    else out << "    ";
+    out << arg;
+    if (type != "flag") out << "=<" << type << ">";
+    out << ",";
+    if (!desc.empty()) out << " ";
+    if (arg != "--help") out << desc;
+    else out << "Display this help and exit";
+
+    return out.str();
 }
 
 void StringArgumentConfig::PutValue(const std::string& name, std::string* value) {
@@ -442,7 +475,7 @@ void StringArgumentConfig::CreateValues(const std::string& name) {
     multi_.insert({name, &cvalues_.at(name)});
 }
 
-void StringArgumentConfig::AddValue(const std::string& arg, std::string value) {
+void StringArgumentConfig::AddValue(const std::string& arg, const std::string& value) {
     if (!multi_.contains(arg)) {
         PrintError("Can't set multi value argument:", arg);
     }
@@ -458,7 +491,7 @@ void StringArgumentConfig::SetDefault(const std::string& arg, const std::string&
     is_default_.insert(arg);
 }
 
-void StringArgumentConfig::SetParcedArgument(const std::string& arg, const std::string value) {
+void StringArgumentConfig::SetParcedArgument(const std::string& arg, const std::string& value) {
     if (this->IsMultiValueArgument(arg)) {
         if (this->IsStored(arg)) {
             this->GetValues(arg)->push_back(value);
@@ -475,6 +508,32 @@ void StringArgumentConfig::SetParcedArgument(const std::string& arg, const std::
             this->CreateValue(arg, value);
         }
     }
+}
+std::string StringArgumentConfig::GetExtraArgumentsDescription(const std::string& arg) const {
+    std::stringstream out;
+    bool any = false;
+    if (is_multi_.contains(arg)) {
+        out << "repeated";
+        any = true;
+    }
+
+    if (is_default_.contains(arg)) {
+        if (any) out << ", ";
+        out << "default = ";
+        if (any) out << cvalues_.at(arg);
+        else out << cvalue_.at(arg);
+        any = true;
+    }
+
+    if (positional_ == arg) {
+        if (any) out << ", ";
+        out << "positional";
+        any = true;
+    }
+
+    if (!any) return "";
+
+    return " [" + out.str() + "]";
 }
 
 // void StringArgumentConfig::CreateValues(std::string name, const std::string& value) {
@@ -559,6 +618,32 @@ void IntArgumentConfig::SetParcedArgument(const std::string& arg, const int valu
         }
     }
 }
+std::string IntArgumentConfig::GetExtraArgumentsDescription(const std::string& arg) const {
+    std::stringstream out;
+    bool any = false;
+    if (is_multi_.contains(arg)) {
+        out << "repeated";
+        any = true;
+    }
+
+    if (is_default_.contains(arg)) {
+        if (any) out << ", ";
+        out << "default = ";
+        if (any) out << cvalues_.at(arg);
+        else out << cvalue_.at(arg);
+        any = true;
+    }
+
+    if (positional_ == arg) {
+        if (any) out << ", ";
+        out << "positional";
+        any = true;
+    }
+
+    if (!any) return "";
+
+    return " [" + out.str() + "]";
+}
 
 bool ArgParser::Help() const {
     return is_added_help_;
@@ -592,5 +677,16 @@ void FlagConfig::SetDefault(const std::string& arg, const bool value) {
 }
 bool FlagConfig::IsStored(const std::string& arg) {
     return names_.contains(arg);
+}
+std::string FlagConfig::GetExtraArgumentsDescription(const std::string& arg) const {
+    std::stringstream out;
+
+    if (!is_default_.contains(arg)) {
+        return "";
+    }
+
+    out << " [default = " << (cvalue_.at(arg) ? "true]" : "false]");
+
+    return out.str();
 }
 } // namespace ArgumentParser

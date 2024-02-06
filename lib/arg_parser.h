@@ -9,7 +9,24 @@
 #include <string>
 #include <vector>
 
+template<class T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T> vec) {
+    out << "{";
+    for (int i = 0 ; i < vec.size() - 1 ; ++i) {
+        out << vec[i] << " ";
+    }
+    if (!vec.empty())
+        out << vec.back();
+    out << "}";
+
+    return out;
+}
+
 namespace ArgumentParser {
+struct ArgumentMainData {
+    std::string key_;
+    std::string desc_;
+};
 class BaseArgumentConfig {
     public:
         virtual ~BaseArgumentConfig() = default;
@@ -20,15 +37,18 @@ class BaseArgumentConfig {
         void SetArgument(const std::string&, const std::string&, const std::string& desc = "");
         virtual void MakeMulti(const std::string&);
         [[nodiscard]] bool IsMultiValueArgument(const std::string&) const;
-        [[nodiscard]] const std::set<std::string>& GetUsedArgumentsList() const;
+        [[nodiscard]] std::vector<std::string> GetUsedArgumentsList() const;
         [[nodiscard]] bool IsDefault(const std::string&) const;
         [[nodiscard]] std::vector<std::string> GetKeyArgumentsList() const;
+        [[nodiscard]] ArgumentMainData GetArgumentMainData(const std::string&) const;
+        std::string GetArgumentHelpDescription(const char*, const std::string&) const;
 
     private:
     protected:
+        // template<class T>
+        // std::map<std::string, std::vector<T>> cvalues_;
         std::map<std::string, std::string> keys_;
-        std::map<std::string, std::string> desc_;
-        std::set<std::string> used_;
+        std::map<std::string, ArgumentMainData> used_;
         std::set<std::string> is_default_;
         std::set<std::string> is_multi_;
 };
@@ -50,6 +70,7 @@ class IntArgumentConfig final : public BaseArgumentConfig {
         [[nodiscard]] bool IsStored(const std::string&) const;
         void SetDefault(const std::string&, int);
         void SetParcedArgument(const std::string&, int);
+        [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
 
         // bool IsMulti
         // [[nodiscard]] bool IsSingleArgument(std::string) const;
@@ -58,7 +79,7 @@ class IntArgumentConfig final : public BaseArgumentConfig {
         std::map<std::string, int*> names_;
         std::map<std::string, std::vector<int>*> multi_;
         std::map<std::string, int> cvalue_;
-        std::map<std::string, std::vector<int>> cvalues_;
+        std::map<std::string, std::vector<int> > cvalues_;
         std::string positional_{};
         bool is_positional_ = false;
 };
@@ -74,10 +95,11 @@ class StringArgumentConfig final : public BaseArgumentConfig {
         [[nodiscard]] bool IsPositional() const;
         void CreateValue(const std::string&, const std::string&);
         void CreateValues(const std::string&);
-        void AddValue(const std::string&, std::string);
+        void AddValue(const std::string&, const std::string&);
         [[nodiscard]] bool IsStored(const std::string&) const;
         void SetDefault(const std::string&, const std::string&);
-        void SetParcedArgument(const std::string&, std::string);
+        void SetParcedArgument(const std::string&, const std::string&);
+    [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
         // void CreateValues(std::string, const std::string&);
         // void CreateValues(std::string, )
         // [[nodiscard]] bool IsSingleArgument(std::string) const;
@@ -100,6 +122,7 @@ class FlagConfig final : public BaseArgumentConfig {
         void CreateValue(const std::string&, bool);
         void SetDefault(const std::string&, bool);
         bool IsStored(const std::string&);
+    [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
 
     private:
         std::map<std::string, bool*> names_; // [name, stored value]
