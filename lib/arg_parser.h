@@ -23,10 +23,6 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T> vec) {
 }
 
 namespace ArgumentParser {
-struct ArgumentMainData {
-    std::string key_;
-    std::string desc_;
-};
 class BaseArgumentConfig {
     public:
         virtual ~BaseArgumentConfig() = default;
@@ -40,10 +36,14 @@ class BaseArgumentConfig {
         [[nodiscard]] std::vector<std::string> GetUsedArgumentsList() const;
         [[nodiscard]] bool IsDefault(const std::string&) const;
         [[nodiscard]] std::vector<std::string> GetKeyArgumentsList() const;
-        [[nodiscard]] ArgumentMainData GetArgumentMainData(const std::string&) const;
         std::string GetArgumentHelpDescription(const char*, const std::string&) const;
 
     private:
+        struct ArgumentMainData {
+            std::string key_;
+            std::string desc_;
+        };
+
     protected:
         // template<class T>
         // std::map<std::string, std::vector<T>> cvalues_;
@@ -99,7 +99,7 @@ class StringArgumentConfig final : public BaseArgumentConfig {
         [[nodiscard]] bool IsStored(const std::string&) const;
         void SetDefault(const std::string&, const std::string&);
         void SetParcedArgument(const std::string&, const std::string&);
-    [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
+        [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
         // void CreateValues(std::string, const std::string&);
         // void CreateValues(std::string, )
         // [[nodiscard]] bool IsSingleArgument(std::string) const;
@@ -121,8 +121,8 @@ class FlagConfig final : public BaseArgumentConfig {
         void CreateValue(const std::string&);
         void CreateValue(const std::string&, bool);
         void SetDefault(const std::string&, bool);
-        bool IsStored(const std::string&);
-    [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
+        [[nodiscard]] bool IsStored(const std::string&) const;
+        [[nodiscard]] std::string GetExtraArgumentsDescription(const std::string&) const;
 
     private:
         std::map<std::string, bool*> names_; // [name, stored value]

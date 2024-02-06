@@ -40,11 +40,15 @@ bool ArgParser::Parse(const std::vector<std::string>& args) {
     if (IsArgumentCoincidence())
         return false;
 
-    for (size_t i = 1 ; i < args.size() ; ++i) {
-        if (args[i] == "--help" || args[i] == "-h") {
-            std::cerr << HelpDescription();
+    for (auto& elem : args) {
+        if (elem == "--help" || elem == "-h") {
+            is_added_help_ = true;
             return true;
-        } {
+        }
+    }
+
+    for (size_t i = 1 ; i < args.size() ; ++i) {
+        {
             std::vector<std::string> cur_arg_config;
             cur_arg_config.push_back(args[i]);
             if (i + 1 < args.size())
@@ -117,7 +121,7 @@ bool ArgParser::Parse(int argc, char** argv) {
 }
 
 ArgParser& ArgParser::AddHelp(const std::string& desc) {
-    is_added_help_ = true;
+    // is_added_help_ = true;
     return AddFlag("-h", "--help", desc);
 }
 
@@ -311,6 +315,8 @@ ArgParser& ArgParser::Positional() {
     } else if (IsIntArgument(int_args_, cur_arg_)) {
         // int_args_.MakeMulti(cur_arg_);
         int_args_.PutPositional(cur_arg_);
+    } else {
+        PrintError("Try make positional flag argument", cur_arg_);
     }
 
     return *this;
@@ -406,12 +412,6 @@ std::vector<std::string> BaseArgumentConfig::GetKeyArgumentsList() const {
     return res;
 }
 
-ArgumentMainData BaseArgumentConfig::GetArgumentMainData(const std::string& arg) const {
-    if (!used_.contains(arg))
-        PrintError("Can't find argument", arg);
-    return used_.at(arg);
-}
-
 std::string BaseArgumentConfig::GetArgumentHelpDescription(const char* type, const std::string& arg) const {
     std::stringstream out;
     auto& [key, desc] = used_.at(arg);
@@ -420,7 +420,7 @@ std::string BaseArgumentConfig::GetArgumentHelpDescription(const char* type, con
     if (!key.empty()) out << ", ";
     else out << "    ";
     out << arg;
-    if (type != "flag") out << "=<" << type << ">";
+    if (!std::strcmp(type, "flag")) out << "=<" << type << ">";
     out << ",";
     if (!desc.empty()) out << " ";
     if (arg != "--help") out << desc;
@@ -661,7 +661,7 @@ bool*& FlagConfig::GetValue(const std::string& name) {
         PrintError("No such argument in parser:", name);
         exit(EXIT_FAILURE);
     }
-    return names_[name];
+    return names_.at(name);
 }
 void FlagConfig::CreateValue(const std::string& arg) {
     cvalue_.insert({arg, true});
@@ -675,9 +675,11 @@ void FlagConfig::SetDefault(const std::string& arg, const bool value) {
     CreateValue(arg, value);
     is_default_.insert(arg);
 }
-bool FlagConfig::IsStored(const std::string& arg) {
+
+bool FlagConfig::IsStored(const std::string& arg) const {
     return names_.contains(arg);
 }
+
 std::string FlagConfig::GetExtraArgumentsDescription(const std::string& arg) const {
     std::stringstream out;
 
