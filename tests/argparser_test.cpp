@@ -25,7 +25,7 @@ TEST(ArgParserTestSuite, StringTest) {
     ASSERT_EQ(parser.GetStringValue("--param1"), "value1");
 }
 
-TEST(ArgParserTestSuite, ShortNameTest) {
+TEST(ArgParserTestSuite, KeyTest) {
     ArgParser parser("My Parser");
     parser.AddStringArgument("-p", "--param1", "");
 
@@ -159,7 +159,7 @@ TEST(ArgParserTestSuite, FlagsTest) {
     ASSERT_TRUE(flag3);
 }
 
-TEST(ArgParserTestSuite, SyntaxSugarIntTest) {
+TEST(ArgParserTestSuite, ShortCutIntTest) {
     ArgParser parser("Sugar parser");
     int some_value;
     parser.AddFlag("-a", "--flag1", "flag1");
@@ -171,7 +171,7 @@ TEST(ArgParserTestSuite, SyntaxSugarIntTest) {
     ASSERT_EQ(some_value, 5);
 }
 
-TEST(ArgParserTestSuite, SyntaxSugarStringTest) {
+TEST(ArgParserTestSuite, ShortCutStringTest) {
     ArgParser parser("Sugar parser");
     std::string some_value;
     parser.AddFlag("-a", "--flag1", "flag1");
