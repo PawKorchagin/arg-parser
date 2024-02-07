@@ -337,7 +337,7 @@ std::cout << some_value << std::endl;
 
 Use special shorthand type in command line
 
-```console
+
 ```console
 foo@bar:/example/directories/$ ./main -ac 5
 ```
