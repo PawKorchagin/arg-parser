@@ -40,7 +40,7 @@ ArgumentParser::ArgParser parser("My parser");
 
 ## Add Typed Argument
 
-TODO
+You can configure set of options for your project by adding them to parser.
 
 ### Integer Argument
 ```c++
@@ -103,7 +103,6 @@ You can view value of these arguments
 
 ```text
 5
-
 ```
 
 ## Storing Argument Value
@@ -353,4 +352,6 @@ Result:
 
 ## Currently Under Development
 
-- ```branch dev``` MultiValue GetValue(index) 
+- ```branch dev``` MultiValue GetValue(index)
+- ```branch dev``` --multivalue-arg 1 2 3 4 ...
+- ```branch dev``` MultiValue GetSize(multivalue-arg)
